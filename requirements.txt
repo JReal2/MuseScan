@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+ultralytics
+opencv-python
+numpy
+torch
+torchvision
+midi2audio
+pydub
+pretty_midi
