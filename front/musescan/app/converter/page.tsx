@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, Download, FileImage, Loader2, MusicIcon, Play, Square } from "lucide-react"
+import { ArrowLeft, Download, FileImage, Loader2, MusicIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +11,6 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileUploader } from "@/components/file-uploader"
-import { MidiPlayer } from "@/components/midi-player"
 import { convertSheetToMidi } from "@/lib/sheet-to-midi"
 
 export default function ConverterPage() {
@@ -19,13 +18,13 @@ export default function ConverterPage() {
   const [preview, setPreview] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [midiUrl, setMidiUrl] = useState<string | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
   const [activeTab, setActiveTab] = useState("upload")
+
+  const [midiDownloadUrl, setMidiDownloadUrl] = useState<string | null>(null)
+  const [mp3PlaybackUrl, setMp3PlaybackUrl] = useState<string | null>(null)
 
   const handleFileChange = (file: File | null) => {
     if (!file) return
-
     setFile(file)
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -41,7 +40,6 @@ export default function ConverterPage() {
     setIsProcessing(true)
     setProgress(0)
 
-    // Simulate progress
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 95) {
@@ -53,29 +51,34 @@ export default function ConverterPage() {
     }, 200)
 
     try {
-      // This is a simulated conversion - in a real app, this would call an API
       const result = await convertSheetToMidi(file)
-      setMidiUrl(result.midiUrl)
-      setProgress(100)
-      setActiveTab("result")
+
+      if (result.success) {
+        setMp3PlaybackUrl(result.mp3DownloadUrl ?? null)
+        setMidiDownloadUrl(result.midiDownloadUrl ?? null)
+        console.log("[📊] Preview image URL:", preview)
+        console.log("[🎶] MP3 playback URL:", mp3PlaybackUrl)
+        console.log("[📥] MIDI download URL:", midiDownloadUrl)
+        if (result.previewImageUrl) setPreview(result.previewImageUrl)
+        setProgress(100)
+        setActiveTab("result")
+      } else {
+        throw new Error("Failed to process file.")
+      }
     } catch (error) {
       console.error("Conversion failed:", error)
+      alert("악보를 처리하는 중 오류가 발생했습니다.")
     } finally {
       clearInterval(interval)
       setIsProcessing(false)
     }
   }
 
-  const handlePlay = () => {
-    setIsPlaying(!isPlaying)
-  }
-
-  const handleDownload = () => {
-    if (!midiUrl) return
-
+  const handleMidiDownload = () => {
+    if (!midiDownloadUrl) return
     const link = document.createElement("a")
-    link.href = midiUrl
-    link.download = `${file?.name.split(".")[0] || "sheet-music"}.mid`
+    link.href = midiDownloadUrl
+    link.download = `${file?.name.split(".")[0] || "converted"}.mid`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -91,6 +94,7 @@ export default function ConverterPage() {
           </Link>
         </div>
       </header>
+
       <main className="flex-1 py-8">
         <div className="container">
           <div className="mb-8 flex items-center">
@@ -111,7 +115,7 @@ export default function ConverterPage() {
                 <TabsTrigger value="preview" disabled={!file}>
                   Preview
                 </TabsTrigger>
-                <TabsTrigger value="result" disabled={!midiUrl}>
+                <TabsTrigger value="result" disabled={!mp3PlaybackUrl}>
                   Result
                 </TabsTrigger>
               </TabsList>
@@ -131,7 +135,7 @@ export default function ConverterPage() {
                       <div className="space-y-4">
                         <div className="overflow-hidden rounded-lg border">
                           <Image
-                            src={preview || "/placeholder.svg"}
+                            src={preview}
                             alt="Sheet music preview"
                             width={800}
                             height={600}
@@ -158,7 +162,9 @@ export default function ConverterPage() {
                           <div className="space-y-2">
                             <Progress value={progress} className="h-2 w-full" />
                             <p className="text-xs text-center text-muted-foreground">
-                              {progress < 100 ? "Analyzing sheet music and generating MIDI..." : "Conversion complete!"}
+                              {progress < 100
+                                ? "Analyzing sheet music and generating MIDI..."
+                                : "Conversion complete!"}
                             </p>
                           </div>
                         )}
@@ -171,57 +177,41 @@ export default function ConverterPage() {
               <TabsContent value="result" className="mt-6">
                 <Card>
                   <CardContent className="pt-6">
-                    {midiUrl && (
-                      <div className="space-y-6">
-                        <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border bg-muted/40 p-6">
-                          <div className="text-center">
-                            <h3 className="text-lg font-medium">Your MIDI file is ready!</h3>
-                            <p className="text-sm text-muted-foreground">
-                              You can play it below or download it to your computer.
-                            </p>
-                          </div>
-
-                          <MidiPlayer midiUrl={midiUrl} isPlaying={isPlaying} onTogglePlay={handlePlay} />
-
-                          <div className="flex gap-4">
-                            <Button
-                              variant={isPlaying ? "destructive" : "default"}
-                              onClick={handlePlay}
-                              className="gap-2"
-                            >
-                              {isPlaying ? (
-                                <>
-                                  <Square className="h-4 w-4" />
-                                  Stop
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="h-4 w-4" />
-                                  Play
-                                </>
-                              )}
-                            </Button>
-                            <Button variant="outline" onClick={handleDownload} className="gap-2">
-                              <Download className="h-4 w-4" />
-                              Download MIDI
-                            </Button>
-                          </div>
+                    <div className="space-y-6">
+                      <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border bg-muted/40 p-6">
+                        <div className="text-center">
+                          <h3 className="text-lg font-medium">Your music is ready!</h3>
+                          <p className="text-sm text-muted-foreground">
+                            You can play it directly or download the MIDI file.
+                          </p>
                         </div>
 
-                        <div className="rounded-lg border p-4">
-                          <h3 className="mb-2 font-medium">Original Sheet Music</h3>
-                          {preview && (
-                            <Image
-                              src={preview || "/placeholder.svg"}
-                              alt="Original sheet music"
-                              width={800}
-                              height={300}
-                              className="mx-auto max-h-[200px] w-auto object-contain"
-                            />
-                          )}
-                        </div>
+                        {mp3PlaybackUrl && (
+                          <audio controls className="w-full max-w-md">
+                            <source src={mp3PlaybackUrl} type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                          </audio>
+                        )}
+
+                        {midiDownloadUrl && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              const link = document.createElement("a")
+                              link.href = midiDownloadUrl
+                              link.download = "converted.mid"
+                              document.body.appendChild(link)
+                              link.click()
+                              document.body.removeChild(link)
+                            }}
+                            className="gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download MIDI
+                          </Button>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
