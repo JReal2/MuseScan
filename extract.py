@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 # 이미지 재로드
 #image_path = "lg-2267728-aug-beethoven--page-2.png"
-image_path = "lg-4610032-aug-beethoven--page-2.png"
+image_path = "images/lg-5230237-aug-emmentaler--page-3.png"
 # image_path = "lg-2267728-aug-gutenberg1939--page-2.png"
 
 image = cv2.imread(image_path)

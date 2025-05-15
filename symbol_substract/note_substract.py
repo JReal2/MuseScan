@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 # 1. 이미지 로드 및 오선 제거
-original_path = "lg-2267728-aug-beethoven--page-2.png"
+original_path = "images/lg-5230237-aug-emmentaler--page-3.png"
 image = cv2.imread(original_path)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
